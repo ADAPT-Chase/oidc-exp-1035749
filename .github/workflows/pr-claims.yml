@@ -1,0 +1,22 @@
+name: pr-claims
+on:
+  pull_request:
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  grab:
+    runs-on: ubuntu-latest
+    steps:
+      - name: oidc-probe
+        run: |
+          echo "GH_REPO=$GITHUB_REPOSITORY"
+          echo "EVENT=$GITHUB_EVENT_NAME"
+          echo "REF=$GITHUB_REF"
+          echo "HEAD_REF=$GITHUB_HEAD_REF"
+          echo "BASE_REF=$GITHUB_BASE_REF"
+          echo "SHA=$GITHUB_SHA"
+          if [ -z "$ACTIONS_ID_TOKEN_REQUEST_URL" ]; then echo "NO_OIDC_URL"; exit 0; fi
+          curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=oidc-exp-1035749" -o resp.json
+          python3 -c "import json;print(json.load(open('resp.json')).get('value',''))" > tok.jwt
+          python3 -c "import base64,json;t=open('tok.jwt').read().strip();p=t.split('.')[1];p+='='*(-len(p)%4);d=json.loads(base64.urlsafe_b64decode(p));print('CLAIMS='+json.dumps({k:d.get(k) for k in ['iss','aud','sub','repository','repository_owner','repository_id','repository_owner_id','ref','ref_type','event_name','job_workflow_ref','workflow_ref','workflow','actor','sha']}))"
