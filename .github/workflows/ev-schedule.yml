@@ -1,0 +1,31 @@
+name: ev-schedule
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: probe-oidc
+        run: |
+          echo "EVENT=$GITHUB_EVENT_NAME REF=$GITHUB_REF HEAD_REF=$GITHUB_HEAD_REF BASE_REF=$GITHUB_BASE_REF"
+          echo "ACTOR=$GITHUB_ACTOR TRIGGERING=$GITHUB_TRIGGERING_ACTOR REPO=$GITHUB_REPOSITORY WREF=$GITHUB_WORKFLOW_REF"
+          if [ -z "$ACTIONS_ID_TOKEN_REQUEST_URL" ]; then echo "NO_OIDC_URL"; exit 0; fi
+          echo "OIDC_URL_SET=yes"
+          curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=oidc-exp-1171200" -o /tmp/tok.json
+          python3 - <<'PY'
+          import json,base64
+          d=json.load(open('/tmp/tok.json'))
+          t=d.get('value','')
+          try:
+              p=t.split('.')[1]; p+='='*(-len(p)%4)
+              c=json.loads(base64.urlsafe_b64decode(p))
+              keys=['iss','aud','sub','repository','repository_owner','repository_id','repository_owner_id','ref','ref_type','event_name','workflow','workflow_ref','job_workflow_ref','actor','run_id','environment']
+              print('CLAIMS='+json.dumps({k:c.get(k) for k in keys},sort_keys=True))
+          except Exception as e:
+              print('DECODE_ERR',e,t[:80])
+          PY
+
