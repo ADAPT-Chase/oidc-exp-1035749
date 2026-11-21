@@ -1,0 +1,10 @@
+name: ev-trigger
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo TRIGGER_OK
